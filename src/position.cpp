@@ -56,10 +56,6 @@ void Position::flip()
     if (this->ep_sq != INVALID_SQ)
         this->ep_sq ^= 56;
 
-    std::uint8_t tmp_cr = (this->castling_rights & 3) << 2;
-    this->castling_rights >>= 2;
-    this->castling_rights ^= tmp_cr;
-
     this->flipped = !this->flipped;
 }
 
@@ -104,7 +100,6 @@ void Position::clear()
         this->color[i] = 0;
     this->flipped = false;
     this->ep_sq = INVALID_SQ;
-    this->castling_rights = 0;
     this->half_moves = 0;
     this->hash_key = 0;
     this->prev_hash_keys.clear();
@@ -115,19 +110,7 @@ void Position::init(std::stringstream& stream)
 {
     this->clear();
     for (int i = 0 ; i < 64; ++i)
-        castling::spoilers[i] = 15;
-
-    if (!castling::is_frc)
-    {
-        castling::rook_sqs[KINGSIDE] = H1;
-        castling::rook_sqs[QUEENSIDE] = A1;
-        castling::spoilers[H1] = 14;
-        castling::spoilers[H8] = 11;
-        castling::spoilers[A1] = 13;
-        castling::spoilers[A8] = 7;
-        castling::spoilers[E1] = 12;
-        castling::spoilers[E8] = 3;
-    }
+        ;
 
     std::string part;
 
@@ -169,94 +152,17 @@ void Position::init(std::stringstream& stream)
         }
     }
 
-    if (castling::is_frc)
-    {
-        int ksq = this->position_of(KING, US);
-        castling::spoilers[ksq] = 12;
-        castling::spoilers[ksq ^ 56] = 3;
-        u64 rook_bb = this->piece_bb(ROOK, US);
-        while (rook_bb) {
-            int rsq = fbitscan(rook_bb);
-            rook_bb &= rook_bb - 1;
-            if (rsq < ksq)
-            {
-                castling::rook_sqs[QUEENSIDE] = rsq;
-                castling::spoilers[rsq] = 13;
-                castling::spoilers[rsq ^ 56] = 7;
-            }
-            else if (rsq > ksq)
-            {
-                castling::rook_sqs[KINGSIDE] = rsq;
-                castling::spoilers[rsq] = 14;
-                castling::spoilers[rsq ^ 56] = 11;
-            }
-        }
-    }
 
     // Side to move
     stream >> part;
     bool need_to_flip = part == "b";
 
-    // Castling
+    // Castling info ignored for Makruk
     stream >> part;
-    for (char c : part) {
-        if (c == '-')
-        {
-            break;
-        }
-        else if (!castling::is_frc)
-        {
-            switch (c) {
-            case 'K': this->castling_rights |= US_OO; break;
-            case 'Q': this->castling_rights |= US_OOO; break;
-            case 'k': this->castling_rights |= THEM_OO; break;
-            case 'q': this->castling_rights |= THEM_OOO; break;
-            default: break;
-            }
-        }
-        else
-        {
-            switch (c) {
-            case 'K': this->castling_rights |= US_OO; break;
-            case 'Q': this->castling_rights |= US_OOO; break;
-            case 'k': this->castling_rights |= THEM_OO; break;
-            case 'q': this->castling_rights |= THEM_OOO; break;
-            default: break;
-            }
 
-            if (c >= 'a' && c <= 'h')
-            {
-                int file = c - 'a';
-                int rank = RANK_8;
-                int rsq = get_sq(file, rank);
-                if (castling::rook_sqs[KINGSIDE] == (rsq^56))
-                    this->castling_rights |= THEM_OO;
-                else
-                    this->castling_rights |= THEM_OOO;
-            }
-            else
-            {
-                int file = c - 'A';
-                int rank = RANK_1;
-                int rsq = get_sq(file, rank);
-                if (castling::rook_sqs[KINGSIDE] == rsq)
-                    this->castling_rights |= US_OO;
-                else
-                    this->castling_rights |= US_OOO;
-            }
-        }
-    }
-
-    // Enpassant square
+    // Enpassant square (unused)
     stream >> part;
-    if (part == "-")
-    {
-        this->ep_sq = INVALID_SQ;
-    }
-    else
-    {
-        this->ep_sq = get_sq(part[0] - 'a', part[1] - '1');
-    }
+    this->ep_sq = INVALID_SQ;
 
     // Halfmove number
     int half_moves;
@@ -320,10 +226,7 @@ u64 Position::calc_hash()
         }
     }
 
-    if (this->ep_sq != INVALID_SQ)
-        hash_key ^= lookups::ep_key(this->ep_sq);
-
-    hash_key ^= lookups::castle_key(this->castling_rights);
+    (void)0; // no enpassant or castling in Makruk
 
     if (flipped) {
         hash_key ^= lookups::stm_key();

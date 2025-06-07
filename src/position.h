@@ -33,12 +33,6 @@ SOFTWARE.
 #include "definitions.h"
 #include "lookups.h"
 
-namespace castling
-{
-    inline bool is_frc = false;
-    inline int rook_sqs[2];
-    inline u8 spoilers[64];
-}
 
 inline bool allow_ponder = true;
 inline bool mcts = false;
@@ -56,11 +50,8 @@ public:
 
     // Getters
     u64 get_hash_key() const;
-    std::uint8_t get_castling_rights() const;
     std::uint8_t get_half_moves() const;
     bool is_flipped() const;
-    bool is_kingside(int sq, int c) const;
-    bool is_queenside(int sq, int c) const;
     bool is_passed_pawn(int sq) const;
     int get_ep_sq() const;
     u64 occupancy_bb() const;
@@ -109,7 +100,6 @@ private:
     u64 color[2];
     bool flipped;
     int ep_sq;
-    std::uint8_t castling_rights;
     std::uint8_t half_moves;
     u64 hash_key;
     std::vector<u64> prev_hash_keys;
@@ -118,11 +108,8 @@ private:
 inline Position::Position() { this->clear(); }
 
 inline u64 Position::get_hash_key() const { return this->hash_key; }
-inline std::uint8_t Position::get_castling_rights() const { return this->castling_rights; }
 inline std::uint8_t Position::get_half_moves() const { return this->half_moves; }
 inline bool Position::is_flipped() const { return this->flipped; }
-inline bool Position::is_kingside(int sq, int c) const { return sq > this->position_of(KING, c); }
-inline bool Position::is_queenside(int sq, int c) const { return sq < this->position_of(KING, c); }
 inline int Position::get_ep_sq() const { return this->ep_sq; }
 inline u64 Position::occupancy_bb() const { return this->color_bb(US) ^ this->color_bb(THEM); }
 inline u64 Position::piece_bb(int pt) const { return this->bb[pt]; }

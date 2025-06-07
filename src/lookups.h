@@ -50,8 +50,6 @@ namespace lookups
     extern void init();
 
     extern u64 psq_key(int c, int pt, int sq);
-    extern u64 castle_key(int rights);
-    extern u64 ep_key(int sq);
     extern u64 stm_key();
 
     extern int distance(int from, int to);

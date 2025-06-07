@@ -159,11 +159,6 @@ void reorder_moves(const Position& pos, SearchStack* ss, SearchGlobals& sg,
         }
         else if (move & CAPTURE_MASK)
         {
-            if (move & ENPASSANT)
-            {
-                order = GOOD_CAP + 10 + PAWN;
-                goto push_order;
-            }
 
             bool defended = pos.attackers_to(to_sq(move), THEM) > 0;
             int cap_val = piece_value[pos.piece_on(to_sq(move))].value();
@@ -328,8 +323,7 @@ int search(Position& pos, SearchStack* const ss, SearchGlobals& sg,
 	// Probe EGTB
 	// No castling allowed
 	// No fifty moves allowed
-	if (   TB_LARGEST > 0
-        && !pos.get_castling_rights()
+        if (   TB_LARGEST > 0
         && !pos.get_half_moves()
         && popcnt(pos.occupancy_bb()) <= (int)TB_LARGEST)
     {
@@ -593,8 +587,7 @@ int search_root(Position& pos, SearchStack* const ss, SearchGlobals& sg,
 	// Probe EGTB
 	// No castling allowed
 	// No fifty moves allowed
-	if (   TB_LARGEST > 0
-        && !pos.get_castling_rights()
+        if (   TB_LARGEST > 0
         && !pos.get_half_moves()
         && popcnt(pos.occupancy_bb()) <= (int)TB_LARGEST)
     {
