@@ -34,7 +34,7 @@ SOFTWARE.
 #include "position.h"
 #include "controller.h"
 
-#define INITIAL_POSITION ("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+#define INITIAL_POSITION ("rnbqkbnr/8/pppppppp/8/8/PPPPPPPP/8/RNBQKBNR w - - 0 1")
 
 volatile bool searching = false;
 

@@ -40,14 +40,6 @@ std::string get_move_string(Move move, bool flipped)
     move_string.push_back('a' + file_of(from));
     move_string.push_back('1' + rank_of(from));
 
-    if (castling::is_frc && (move & CASTLING))
-    {
-        int qs_sq = flipped ? C8 : C1;
-        to = to == qs_sq ? castling::rook_sqs[QUEENSIDE]
-                         : castling::rook_sqs[KINGSIDE];
-        if (flipped)
-            to ^= 56;
-    }
 
     move_string.push_back('a' + file_of(to));
     move_string.push_back('1' + rank_of(to));
@@ -76,28 +68,11 @@ bool Position::legal_move(Move move) const
 {
     int from = from_sq(move);
     int ksq = this->position_of(KING, US);
-    if (move & ENPASSANT)
-    {
-        u64 to_bb = BB(this->ep_sq);
-        u64 cap_bb = to_bb >> 8;
-        u64 pieces = (this->occupancy_bb() ^ BB(from) ^ cap_bb) | to_bb;
-
-        u64 qr_bb = this->piece_bb(QUEEN) | this->piece_bb(ROOK);
-        u64 qb_bb = this->piece_bb(QUEEN) | this->piece_bb(BISHOP);
-        u64 them_bb = this->color_bb(THEM);
-
-        return !(lookups::rook(ksq, pieces) & (qr_bb & them_bb))
-            && !(lookups::bishop(ksq, pieces) & (qb_bb & them_bb));
-    }
-    else if (from == ksq)
-    {
-        return (move & CASTLING) || !(this->attackers_to(to_sq(move), THEM));
-    }
+    if (from == ksq)
+        return !(this->attackers_to(to_sq(move), THEM));
     else
-    {
         return !(this->pinned(US) & BB(from))
              || (BB(to_sq(move)) & lookups::full_ray(from, ksq));
-    }
 }
 
 void Position::make_null_move()
@@ -113,9 +88,6 @@ void Position::make_move(Move move)
 {
     int from = from_sq(move),
         to = to_sq(move);
-
-    this->castling_rights &= castling::spoilers[from]
-                           & castling::spoilers[to];
 
     if (this->ep_sq != INVALID_SQ)
         this->ep_sq = INVALID_SQ;
@@ -140,34 +112,6 @@ void Position::make_move(Move move)
             this->move_piece(from, to, this->piece_on(from), US);
             this->reset_half_moves();
             this->clear_prev_hash_keys();
-            break;
-        case DOUBLE_PUSH:
-            this->move_piece(from, to, PAWN, US);
-            this->ep_sq = from + 8;
-            break;
-        case ENPASSANT:
-            this->move_piece(from, to, PAWN, US);
-            this->remove_piece(to - 8, PAWN, THEM);
-            break;
-        case CASTLING:
-            int rfrom, rto;
-            switch (to) {
-            case C1:
-                rto = D1;
-                rfrom = castling::rook_sqs[QUEENSIDE];
-                break;
-            case G1:
-                rto = F1;
-                rfrom = castling::rook_sqs[KINGSIDE];
-                break;
-            default:
-                rto = rfrom = -1;
-                break;
-            }
-            this->remove_piece(rfrom, ROOK, US);
-            this->remove_piece(from, KING, US);
-            this->put_piece(rto, ROOK, US);
-            this->put_piece(to, KING, US);
             break;
         case PROM_CAPTURE:
             this->remove_piece(to, this->piece_on(to), THEM);

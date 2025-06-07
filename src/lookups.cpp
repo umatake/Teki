@@ -28,8 +28,6 @@ SOFTWARE.
 #include "utils.h"
 
 u64 psq_keys_bb[2][6][64];
-u64 castle_keys_bb[16];
-u64 ep_keys_bb[64];
 u64 stm_key_bb;
 
 int distance_val[64][64];
@@ -119,11 +117,21 @@ void init_non_sliders()
 void init_pseudo_sliders()
 {
     for (int sq = A1; sq < NUM_SQUARES; ++sq) {
-        bishop_attacks[sq] = lookups::northeast(sq) | lookups::northwest(sq)
-                           | lookups::southeast(sq) | lookups::southwest(sq);
+        bishop_attacks[sq] = 0;
+        bishop_attacks[sq] |= sBB(sq + 8) & ~RANK_1_MASK;
+        bishop_attacks[sq] |= sBB(sq + 9) & ~(FILE_A_MASK | RANK_1_MASK);
+        bishop_attacks[sq] |= sBB(sq + 7) & ~(FILE_H_MASK | RANK_1_MASK);
+        bishop_attacks[sq] |= sBB(sq - 9) & ~(FILE_H_MASK | RANK_8_MASK);
+        bishop_attacks[sq] |= sBB(sq - 7) & ~(FILE_A_MASK | RANK_8_MASK);
+
         rook_attacks[sq] = lookups::north(sq) | lookups::south(sq)
                          | lookups::east(sq) | lookups::west(sq);
-        queen_attacks[sq] = rook_attacks[sq] | bishop_attacks[sq];
+
+        queen_attacks[sq] = 0;
+        queen_attacks[sq] |= sBB(sq + 9) & ~(FILE_A_MASK | RANK_1_MASK);
+        queen_attacks[sq] |= sBB(sq + 7) & ~(FILE_H_MASK | RANK_1_MASK);
+        queen_attacks[sq] |= sBB(sq - 9) & ~(FILE_H_MASK | RANK_8_MASK);
+        queen_attacks[sq] |= sBB(sq - 7) & ~(FILE_A_MASK | RANK_8_MASK);
     }
 }
 
@@ -273,12 +281,6 @@ void init_keys()
             }
         }
     }
-    for (int sq = A1; sq <= H8; ++sq) {
-        ep_keys_bb[sq] = utils::rand_u64(0, UINT64_MAX);
-    }
-    for (int cr = 0; cr < 16; ++cr) {
-        castle_keys_bb[cr] = utils::rand_u64(0, UINT64_MAX);
-    }
     stm_key_bb = utils::rand_u64(0, UINT64_MAX);
 }
 
@@ -334,8 +336,6 @@ namespace lookups
     }
 
     u64 psq_key(int c, int pt, int sq) { return psq_keys_bb[c][pt][sq]; }
-    u64 castle_key(int rights) { return castle_keys_bb[rights]; }
-    u64 ep_key(int sq) { return ep_keys_bb[sq]; }
     u64 stm_key() { return stm_key_bb; }
 
     int distance(int from, int to) { return distance_val[from][to]; }
@@ -370,18 +370,7 @@ namespace lookups
 
     u64 bishop(int square, u64 occupancy)
     {
-        u64 atk = bishop(square);
-        u64 nw_blockers = (northwest(square) & occupancy) | BB(A8);
-        u64 ne_blockers = (northeast(square) & occupancy) | BB(H8);
-        u64 sw_blockers = (southwest(square) & occupancy) | BB(A1);
-        u64 se_blockers = (southeast(square) & occupancy) | BB(H1);
-
-        atk ^= northwest(fbitscan(nw_blockers));
-        atk ^= northeast(fbitscan(ne_blockers));
-        atk ^= southwest(rbitscan(sw_blockers));
-        atk ^= southeast(rbitscan(se_blockers));
-
-        return atk;
+        return bishop_attacks[square];
     }
 
     u64 rook(int square, u64 occupancy)
@@ -402,26 +391,7 @@ namespace lookups
 
     u64 queen(int square, u64 occupancy)
     {
-        u64 atk = queen(square);
-        u64 nw_blockers = (northwest(square) & occupancy) | BB(A8);
-        u64 ne_blockers = (northeast(square) & occupancy) | BB(H8);
-        u64 sw_blockers = (southwest(square) & occupancy) | BB(A1);
-        u64 se_blockers = (southeast(square) & occupancy) | BB(H1);
-        u64 n_blockers = (north(square) & occupancy) | BB(H8);
-        u64 s_blockers = (south(square) & occupancy) | BB(A1);
-        u64 w_blockers = (west(square) & occupancy) | BB(A1);
-        u64 e_blockers = (east(square) & occupancy) | BB(H8);
-
-        atk ^= northwest(fbitscan(nw_blockers));
-        atk ^= northeast(fbitscan(ne_blockers));
-        atk ^= southwest(rbitscan(sw_blockers));
-        atk ^= southeast(rbitscan(se_blockers));
-        atk ^= north(fbitscan(n_blockers));
-        atk ^= south(rbitscan(s_blockers));
-        atk ^= west(rbitscan(w_blockers));
-        atk ^= east(fbitscan(e_blockers));
-
-        return atk;
+        return queen_attacks[square];
     }
 
     u64 attacks(int piece_type, int square, u64 occupancy, int side)
@@ -429,9 +399,9 @@ namespace lookups
         switch (piece_type) {
         case PAWN: return pawn(square, side);
         case KNIGHT: return knight(square);
-        case BISHOP: return bishop(square, occupancy);
+        case BISHOP: return bishop(square);
         case ROOK: return rook(square, occupancy);
-        case QUEEN: return queen(square, occupancy);
+        case QUEEN: return queen(square);
         case KING: return king(square);
         default: return -1;
         }
